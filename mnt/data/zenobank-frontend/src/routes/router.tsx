@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { AppShell } from '@/components/layout/app-shell';
-import { OnboardingGuard, ProtectedRoute, RoleGuard } from '@/routes/guards';
+import { AdminGuard, OnboardingGuard, ProtectedRoute, RoleGuard } from '@/routes/guards';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
@@ -25,7 +25,7 @@ import { AdminNotificationsPage } from '@/pages/admin/admin-notifications-page';
 import { ForbiddenPage, NotFoundPage, UnauthorizedPage } from '@/pages/shared/system-pages';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/auth/register" replace /> },
+  { path: '/', element: <Navigate to="/auth/login" replace /> },
   {
     path: '/auth',
     element: <AuthLayout />,
@@ -62,7 +62,7 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        element: <RoleGuard roles={['Admin', 'SuperAdmin', 'Operator']} />,
+        element: <AdminGuard />,
         children: [
           {
             path: '/admin',
@@ -85,3 +85,4 @@ export const router = createBrowserRouter([
   { path: '/forbidden', element: <ForbiddenPage /> },
   { path: '*', element: <NotFoundPage /> },
 ]);
+

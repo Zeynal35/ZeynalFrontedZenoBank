@@ -1,19 +1,18 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import type { ApiResponse } from '@/types/api';
- 
-// ✅ Gateway 7000-dədir - bütün servisləri özündən keçirir
-const PRIMARY_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7000';
-const FALLBACK_URL = import.meta.env.VITE_API_FALLBACK_URL ?? 'http://localhost:5000';
- 
+
+// ✅ Vite proxy istifadə edirik — bütün /api sorğuları http://localhost:5000-ə yönlənir
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+
 export const api = axios.create({
-  baseURL: PRIMARY_URL,
+  baseURL: BASE_URL,
   withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
   },
 });
- 
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().tokens?.accessToken;
   if (token) {
@@ -21,9 +20,9 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   return config;
 });
- 
+
 let refreshingPromise: Promise<string | null> | null = null;
- 
+
 const refreshAccessToken = async () => {
   const { tokens, clearSession, setSession, user } = useAuthStore.getState();
   if (!tokens?.refreshToken || !user) {
@@ -32,28 +31,18 @@ const refreshAccessToken = async () => {
   }
   try {
     const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-      `${PRIMARY_URL}/api/auth/refresh`,
+      `/api/auth/refresh`,
       { refreshToken: tokens.refreshToken },
       { headers: { 'Content-Type': 'application/json' } },
     );
     setSession({ user, tokens: { accessToken: response.data.data.accessToken, refreshToken: response.data.data.refreshToken } });
     return response.data.data.accessToken;
   } catch {
-    try {
-      const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-        `${FALLBACK_URL}/api/auth/refresh`,
-        { refreshToken: tokens.refreshToken },
-        { headers: { 'Content-Type': 'application/json' } },
-      );
-      setSession({ user, tokens: { accessToken: response.data.data.accessToken, refreshToken: response.data.data.refreshToken } });
-      return response.data.data.accessToken;
-    } catch {
-      clearSession();
-      return null;
-    }
+    clearSession();
+    return null;
   }
 };
- 
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiResponse<unknown>>) => {
@@ -75,7 +64,7 @@ api.interceptors.response.use(
     return Promise.reject(new Error(message));
   },
 );
- 
+
 export async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>) {
   const response = await promise;
   const payload = response.data;

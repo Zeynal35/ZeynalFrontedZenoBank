@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { AppShell } from '@/components/layout/app-shell';
-import { AdminGuard, OnboardingGuard, ProtectedRoute, RoleGuard } from '@/routes/guards';
+import { OnboardingGuard, ProtectedRoute, RoleGuard } from '@/routes/guards';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
@@ -22,16 +22,17 @@ import { AdminAccountsPage } from '@/pages/admin/admin-accounts-page';
 import { AdminTransactionsPage } from '@/pages/admin/admin-transactions-page';
 import { AdminLoansPage } from '@/pages/admin/admin-loans-page';
 import { AdminNotificationsPage } from '@/pages/admin/admin-notifications-page';
+import { AdminAuditLogPage } from '@/pages/admin/admin-audit-log-page';
 import { ForbiddenPage, NotFoundPage, UnauthorizedPage } from '@/pages/shared/system-pages';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/auth/login" replace /> },
+  { path: '/', element: <Navigate to="/auth/register" replace /> },
   {
     path: '/auth',
     element: <AuthLayout />,
     children: [
       { path: 'register', element: <RegisterPage /> },
-      { path: 'login', element: <LoginPage /> },
+      { path: 'login',    element: <LoginPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
     ],
   },
@@ -43,38 +44,39 @@ export const router = createBrowserRouter([
         element: <AppShell mode="customer" />,
         children: [
           { path: 'onboarding/customer-profile', element: <CustomerOnboardingPage /> },
-          { path: 'onboarding/kyc', element: <KycUploadPage /> },
+          { path: 'onboarding/kyc',              element: <KycUploadPage /> },
           {
             element: <OnboardingGuard />,
             children: [
-              { path: 'dashboard', element: <CustomerDashboardPage /> },
-              { path: 'accounts', element: <AccountsPage /> },
+              { path: 'dashboard',    element: <CustomerDashboardPage /> },
+              { path: 'accounts',     element: <AccountsPage /> },
               { path: 'accounts/:id', element: <AccountDetailPage /> },
               { path: 'transactions', element: <TransactionsPage /> },
-              { path: 'deposit', element: <TransactionActionPage mode="deposit" /> },
-              { path: 'withdraw', element: <TransactionActionPage mode="withdraw" /> },
-              { path: 'transfer', element: <TransactionActionPage mode="transfer" /> },
-              { path: 'loans', element: <LoansPage /> },
+              { path: 'deposit',      element: <TransactionActionPage mode="deposit" /> },
+              { path: 'withdraw',     element: <TransactionActionPage mode="withdraw" /> },
+              { path: 'transfer',     element: <TransactionActionPage mode="transfer" /> },
+              { path: 'loans',        element: <LoansPage /> },
               { path: 'notifications', element: <NotificationsPage /> },
-              { path: 'profile', element: <ProfilePage /> },
+              { path: 'profile',      element: <ProfilePage /> },
             ],
           },
         ],
       },
       {
-        element: <AdminGuard />,
+        element: <RoleGuard roles={['Admin', 'SuperAdmin', 'Operator']} />,
         children: [
           {
             path: '/admin',
             element: <AppShell mode="admin" />,
             children: [
-              { path: 'dashboard', element: <AdminDashboardPage /> },
-              { path: 'customers', element: <AdminCustomersPage /> },
-              { path: 'kyc', element: <AdminKycPage /> },
-              { path: 'accounts', element: <AdminAccountsPage /> },
-              { path: 'transactions', element: <AdminTransactionsPage /> },
-              { path: 'loans', element: <AdminLoansPage /> },
+              { path: 'dashboard',     element: <AdminDashboardPage /> },
+              { path: 'customers',     element: <AdminCustomersPage /> },
+              { path: 'kyc',           element: <AdminKycPage /> },
+              { path: 'accounts',      element: <AdminAccountsPage /> },
+              { path: 'transactions',  element: <AdminTransactionsPage /> },
+              { path: 'loans',         element: <AdminLoansPage /> },
               { path: 'notifications', element: <AdminNotificationsPage /> },
+              { path: 'audit-logs',    element: <AdminAuditLogPage /> },   // ← YENİ
             ],
           },
         ],
@@ -82,7 +84,6 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/unauthorized', element: <UnauthorizedPage /> },
-  { path: '/forbidden', element: <ForbiddenPage /> },
-  { path: '*', element: <NotFoundPage /> },
+  { path: '/forbidden',    element: <ForbiddenPage /> },
+  { path: '*',             element: <NotFoundPage /> },
 ]);
-

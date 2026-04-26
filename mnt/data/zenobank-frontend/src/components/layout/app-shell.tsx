@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, Building2, CreditCard, LayoutDashboard, Landmark, ShieldCheck, UserCircle2, Users, X } from 'lucide-react';
+import { Bell, Building2, CreditCard, LayoutDashboard, Landmark, ShieldAlert, ShieldCheck, UserCircle2, Users, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,35 +17,33 @@ import { authService } from '@/services/auth-service';
 import { useBootstrap } from '@/hooks/use-bootstrap';
 
 const customerNav = [
-  { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/app/accounts', label: 'Accounts', icon: CreditCard },
-  { to: '/app/transactions', label: 'Transactions', icon: Landmark },
-  { to: '/app/deposit', label: 'Deposit', icon: Building2 },
-  { to: '/app/withdraw', label: 'Withdraw', icon: Building2 },
-  { to: '/app/transfer', label: 'Transfer', icon: Building2 },
-  { to: '/app/loans', label: 'Loans', icon: ShieldCheck },
+  { to: '/app/dashboard',    label: 'Dashboard',     icon: LayoutDashboard },
+  { to: '/app/accounts',     label: 'Accounts',      icon: CreditCard },
+  { to: '/app/transactions', label: 'Transactions',  icon: Landmark },
+  { to: '/app/deposit',      label: 'Deposit',       icon: Building2 },
+  { to: '/app/withdraw',     label: 'Withdraw',      icon: Building2 },
+  { to: '/app/transfer',     label: 'Transfer',      icon: Building2 },
+  { to: '/app/loans',        label: 'Loans',         icon: ShieldCheck },
   { to: '/app/notifications', label: 'Notifications', icon: Bell },
-  { to: '/app/profile', label: 'Profile', icon: UserCircle2 },
+  { to: '/app/profile',      label: 'Profile',       icon: UserCircle2 },
 ];
 
 const adminNav = [
-  { to: '/admin/dashboard', label: 'Admin Dashboard', icon: LayoutDashboard },
-  { to: '/admin/customers', label: 'Customers', icon: Users },
-  { to: '/admin/kyc', label: 'KYC Management', icon: ShieldCheck },
-  { to: '/admin/accounts', label: 'Accounts', icon: CreditCard },
-  { to: '/admin/transactions', label: 'Transactions', icon: Landmark },
-  { to: '/admin/loans', label: 'Loans', icon: Building2 },
-  { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin/dashboard',    label: 'Admin Dashboard', icon: LayoutDashboard },
+  { to: '/admin/customers',    label: 'Customers',       icon: Users },
+  { to: '/admin/kyc',          label: 'KYC Management',  icon: ShieldCheck },
+  { to: '/admin/accounts',     label: 'Accounts',        icon: CreditCard },
+  { to: '/admin/transactions', label: 'Transactions',    icon: Landmark },
+  { to: '/admin/loans',        label: 'Loans',           icon: Building2 },
+  { to: '/admin/notifications', label: 'Notifications',  icon: Bell },
+  { to: '/admin/audit-logs',   label: 'Audit Jurnalı',   icon: ShieldAlert },
 ];
 
-// ✅ Yalnız SuperAdmin və Admin
 const ADMIN_ROLES = ['SuperAdmin', 'Admin'];
 
-// JWT token-dən roles oxu (base64 decode)
 function getRolesFromToken(token: string): string[] {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    // .NET JWT-də roles claim adları müxtəlif ola bilər
     const roles =
       payload['role'] ??
       payload['roles'] ??
@@ -58,7 +56,7 @@ function getRolesFromToken(token: string): string[] {
 }
 
 const adminLoginSchema = z.object({
-  email: z.string().email('Düzgün email daxil edin'),
+  email:    z.string().email('Düzgün email daxil edin'),
   password: z.string().min(1, 'Şifrə tələb olunur'),
 });
 type AdminLoginForm = z.infer<typeof adminLoginSchema>;
@@ -74,19 +72,16 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
   const mutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (result) => {
-      // ✅ Həm user.roles həm də JWT token-dən yoxla
-      const rolesFromUser = result.user.roles ?? [];
+      const rolesFromUser  = result.user.roles ?? [];
       const rolesFromToken = getRolesFromToken(result.tokens.accessToken);
-      const allRoles = [...new Set([...rolesFromUser, ...rolesFromToken])];
-
-      const hasAccess = allRoles.some((r) => ADMIN_ROLES.includes(r));
+      const allRoles       = [...new Set([...rolesFromUser, ...rolesFromToken])];
+      const hasAccess      = allRoles.some((r) => ADMIN_ROLES.includes(r));
 
       if (!hasAccess) {
         toast.error('Giriş qadağandır. Yalnız SuperAdmin və Admin daxil ola bilər.');
         return;
       }
 
-      // User-i roles ilə birlikdə yenilə
       const updatedUser = {
         ...result.user,
         roles: allRoles as typeof result.user.roles,
@@ -106,9 +101,13 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-slate-900/95 p-8 shadow-2xl">
-        <button onClick={onClose} className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:text-white transition">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:text-white transition"
+        >
           <X className="h-5 w-5" />
         </button>
+
         <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80 mb-2">Admin Girişi</p>
         <h2 className="text-2xl font-semibold text-white">ZenoBank Control Center</h2>
         <p className="mt-2 text-sm text-slate-400">SuperAdmin və ya Admin hesabınızla daxil olun.</p>
@@ -139,11 +138,10 @@ export function AppShell({ mode }: { mode: 'customer' | 'admin' }) {
   const { user, tokens, clearSession } = useAuthStore();
   const [adminModalOpen, setAdminModalOpen] = useState(false);
 
-  // ✅ Həm store-dakı roles həm token-dən yoxla
   const rolesFromStore = user?.roles ?? [];
   const rolesFromToken = tokens?.accessToken ? getRolesFromToken(tokens.accessToken) : [];
-  const allRoles = [...new Set([...rolesFromStore, ...rolesFromToken])];
-  const isAdmin = allRoles.some((r) => ADMIN_ROLES.includes(r));
+  const allRoles       = [...new Set([...rolesFromStore, ...rolesFromToken])];
+  const isAdmin        = allRoles.some((r) => ADMIN_ROLES.includes(r));
 
   const navItems = mode === 'admin' ? adminNav : customerNav;
 
@@ -156,8 +154,6 @@ export function AppShell({ mode }: { mode: 'customer' | 'admin' }) {
 
   const handleAvatarClick = () => {
     if (mode === 'admin') {
-      // ✅ Admin → Customer: store-u tamamilə təmizlə, login-ə göndər
-      // Köhnə customer session qalmır, yeni customer login olur
       clearSession();
       window.location.href = '/auth/login';
     } else if (isAdmin) {
@@ -177,29 +173,49 @@ export function AppShell({ mode }: { mode: 'customer' | 'admin' }) {
       {adminModalOpen && <AdminLoginModal onClose={() => setAdminModalOpen(false)} />}
 
       <div className="relative z-10 flex min-h-screen">
+        {/* ── Sidebar ── */}
         <aside className="glass-panel-strong hidden w-80 flex-col border-r border-white/10 p-5 lg:flex">
           <ZenoBankLogo className="mb-10" />
-          <nav className="space-y-2">
+
+          <nav className="space-y-1">
             {navItems.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to}
-                className={({ isActive }) => cn('flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition',
-                  isActive ? 'bg-sky-500/12 text-white shadow-glow' : 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-100')}
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition',
+                    isActive
+                      ? 'bg-sky-500/12 text-white shadow-glow'
+                      : 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-100',
+                    // Audit log linki üçün xüsusi vurğu
+                    to === '/admin/audit-logs' && !({ isActive: false }).isActive
+                      ? 'border-t border-white/[0.06] mt-2 pt-2'
+                      : '',
+                  )
+                }
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{label}</span>
               </NavLink>
             ))}
           </nav>
+
           <div className="mt-auto space-y-4">
-            <button onClick={handleAvatarClick}
-              className="flex w-full items-center gap-3 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100 hover:bg-sky-500/20 transition">
+            <button
+              onClick={handleAvatarClick}
+              className="flex w-full items-center gap-3 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100 hover:bg-sky-500/20 transition"
+            >
               <div className="h-3 w-3 rounded-full bg-sky-300" />
               {mode === 'admin' ? 'Switch to Customer App' : 'Open Admin Panel'}
             </button>
-            <Button variant="secondary" onClick={handleLogout} className="w-full">Sign out</Button>
+            <Button variant="secondary" onClick={handleLogout} className="w-full">
+              Sign out
+            </Button>
           </div>
         </aside>
 
+        {/* ── Main content ── */}
         <div className="flex min-h-screen flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/40 backdrop-blur-xl">
             <div className="page-shell flex items-center justify-between py-4">
@@ -211,17 +227,21 @@ export function AppShell({ mode }: { mode: 'customer' | 'admin' }) {
                   Welcome back, {user?.fullName ?? 'User'}
                 </h2>
               </div>
-              <button onClick={handleAvatarClick}
+              <button
+                onClick={handleAvatarClick}
                 title={mode === 'admin' ? 'Switch to Customer App' : 'Open Admin Panel'}
-                className="grid h-11 w-11 place-items-center rounded-full border border-sky-400/20 bg-gradient-to-br from-sky-500/20 to-blue-500/10 text-sky-100 hover:ring-2 hover:ring-sky-400/40 transition cursor-pointer">
+                className="grid h-11 w-11 place-items-center rounded-full border border-sky-400/20 bg-gradient-to-br from-sky-500/20 to-blue-500/10 text-sky-100 hover:ring-2 hover:ring-sky-400/40 transition cursor-pointer"
+              >
                 {userInitial}
               </button>
             </div>
           </header>
-          <main className="page-shell flex-1 py-6"><Outlet /></main>
+
+          <main className="page-shell flex-1 py-6">
+            <Outlet />
+          </main>
         </div>
       </div>
     </div>
   );
 }
-

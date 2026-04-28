@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, CheckCircle, XCircle, X, FileText } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, X, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SectionHeader } from '@/components/ui/section-header';
 import { StatusBadge } from '@/components/ui/badge';
@@ -8,6 +8,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { customerService, type KycDocument } from '@/services/customer-service';
+import { api } from '@/lib/axios';
+
+// ─── Blob URL hook — faylı token ilə yükləyir ────────────────────────────────
+function useKycFileUrl(docId: string) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    setLoading(true);
+    setError(false);
+    setBlobUrl(null);
+
+    api
+      .get(`/api/customers/kyc/${docId}/file`, { responseType: 'blob' })
+      .then((res) => {
+        objectUrl = URL.createObjectURL(res.data);
+        setBlobUrl(objectUrl);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [docId]);
+
+  return { blobUrl, loading, error };
+}
 
 // ─── Review Modal ─────────────────────────────────────────────────────────────
 function ReviewModal({
@@ -25,8 +55,7 @@ function ReviewModal({
 }) {
   const [note, setNote] = useState('');
 
-  // ✅ Faylı backend-dən al: GET /api/customers/kyc/{id}/file
-  const fileUrl = `https://localhost:7000/api/customers/kyc/${doc.id}/file`;
+  const { blobUrl, loading, error } = useKycFileUrl(doc.id);
 
   const isImage =
     doc.originalFileName?.match(/\.(jpg|jpeg|png)$/i) ||
@@ -59,18 +88,26 @@ function ReviewModal({
         {/* File preview */}
         <div className="flex-1 overflow-auto p-6">
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden min-h-[300px] flex items-center justify-center">
-            {isImage ? (
+            {loading ? (
+              <div className="flex flex-col items-center gap-3 text-slate-400 p-8">
+                <Loader2 className="h-10 w-10 animate-spin text-sky-400" />
+                <p className="text-sm">Loading document...</p>
+              </div>
+            ) : error || !blobUrl ? (
+              <div className="flex flex-col items-center gap-3 text-slate-400 p-8">
+                <FileText className="h-12 w-12" />
+                <p className="text-sm text-red-400">Could not load file preview</p>
+                <p className="text-xs text-slate-500">{doc.originalFileName || 'Document file'}</p>
+              </div>
+            ) : isImage ? (
               <img
-                src={fileUrl}
+                src={blobUrl}
                 alt="KYC Document"
                 className="max-w-full max-h-[400px] object-contain rounded-xl"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
               />
             ) : isPdf ? (
               <iframe
-                src={fileUrl}
+                src={blobUrl}
                 className="w-full h-[400px] rounded-xl"
                 title="KYC Document PDF"
               />
@@ -79,12 +116,11 @@ function ReviewModal({
                 <FileText className="h-12 w-12" />
                 <p className="text-sm">{doc.originalFileName || 'Document file'}</p>
                 <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={blobUrl}
+                  download={doc.originalFileName}
                   className="text-sky-400 hover:text-sky-300 text-sm underline"
                 >
-                  Open file in new tab
+                  Download file
                 </a>
               </div>
             )}
